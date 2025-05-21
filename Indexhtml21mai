@@ -84,6 +84,12 @@
       background-color: #f4f4f4;
       color: #222;
     }
+    .cote-note {
+      font-size: 12px;
+      color: #aaaaaa;
+      text-align: center;
+      margin-top: 5px;
+    }
     #zone-affichage {
       display: none;
       max-width: 1000px;
@@ -283,27 +289,6 @@
       Tesla: "https://upload.wikimedia.org/wikipedia/commons/e/e8/Tesla_logo.png"
     };
 
-    const motsPositifs = ["hausse", "bénéfice", "bon", "croissance", "succès", "record", "accord", "partenariat", "lancement", "réussi"];
-    const motsNegatifs = ["baisse", "perte", "crise", "mauvais", "déception", "échec", "retard", "problème", "chute", "procès"];
-
-    function analyserSentiment(texte) {
-      const mots = texte.toLowerCase().split(/\W+/);
-      let score = 0;
-      mots.forEach(mot => {
-        if (motsPositifs.includes(mot)) score++;
-        if (motsNegatifs.includes(mot)) score--;
-      });
-      return score;
-    }
-
-    function calculerCotes(score) {
-      const probaMonte = Math.min(0.95, Math.max(0.05, 0.5 + score / 20));
-      return {
-        monte: (1 / probaMonte).toFixed(2),
-        descend: (1 / (1 - probaMonte)).toFixed(2)
-      };
-    }
-
     let solde = parseFloat(localStorage.getItem("solde")) || 100;
     const historique = JSON.parse(localStorage.getItem("historique")) || [];
     let graphiqueParis;
@@ -321,6 +306,24 @@
 
     // Stocker les paris personnalisés
     let parisPersonnalises = JSON.parse(localStorage.getItem("parisPersonnalises")) || [];
+
+    // Simuler un cours boursier (à remplacer par une API réelle si souhaité)
+    function getCoursSimule(entreprise) {
+      // Générer un cours de base entre 100 et 1000
+      const base = 100 + Math.random() * 900;
+      // Ajouter une petite variation basée sur l'entreprise (pour différencier)
+      const variation = (entreprise.charCodeAt(0) % 10) / 10; // Exemple : 0.1 à 0.9
+      return parseFloat((base + variation * 50).toFixed(2)); // Cours entre 100 et 1000, arrondi
+    }
+
+    // Simuler une variation de cours basée sur la durée
+    function getCoursFinal(coursInitial, duree) {
+      // Variation max : ±0.1% par minute, ±5% par jour
+      const minutes = duree / 60000;
+      const variationMaxPourcent = Math.min(0.1 * minutes, 5 * (minutes / 1440)); // 1440 min = 1 jour
+      const variationPourcent = (Math.random() * 2 - 1) * variationMaxPourcent; // ±variationMaxPourcent
+      return parseFloat((coursInitial * (1 + variationPourcent / 100)).toFixed(2)); // Arrondi à 2 décimales
+    }
 
     function majGraphiqueParis() {
       const ctx = document.getElementById("graphique-paris").getContext("2d");
@@ -397,31 +400,19 @@
       const container = document.getElementById("cartes-entreprises");
       container.innerHTML = "";
 
+      // Afficher un placeholder en attendant les données de l'API
       Object.keys(entreprises).forEach(nom => {
         const bloc = document.createElement("div");
         bloc.className = "carte-entreprise";
-
-        const actus = [
-          { title: `${nom} en forte croissance`, description: `${nom} annonce une hausse record de ses ventes.` },
-          { title: `${nom} visé par une enquête`, description: `Rumeurs de procès contre ${nom}.` }
-        ];
-
-        let scoreTotal = 0;
-        actus.forEach(article => {
-          scoreTotal += analyserSentiment(article.title + ' ' + article.description);
-        });
-
-        const { monte, descend } = calculerCotes(scoreTotal);
-
         bloc.innerHTML = `
           <img src="${entreprises[nom]}" alt="${nom}" class="logo-entreprise">
           <div class="nom-entreprise">${nom}</div>
           <div class="cotes">
-            <div class="cote-texte cote-monte">⬆️ ${monte}</div>
-            <div class="cote-texte cote-descend">⬇️ ${descend}</div>
+            <div class="cote-texte cote-monte">⬆️ Chargement...</div>
+            <div class="cote-texte cote-descend">⬇️ Chargement...</div>
+            <div class="cote-note">Basé sur l'analyse des actualités</div>
           </div>
         `;
-
         bloc.onclick = () => afficherDetails(nom);
         container.appendChild(bloc);
       });
@@ -466,6 +457,7 @@
     // Gestion du formulaire de pari personnalisé
     document.getElementById("bouton-pari-personnalise").addEventListener("click", () => {
       const form = document.getElementById("form-pari-personnalise");
+      console.log("Bouton pari personnalisé cliqué, affichage du formulaire :", form.style.display);
       form.style.display = form.style.display === "block" ? "none" : "block";
     });
 
@@ -475,6 +467,8 @@
       const duree = parseInt(document.getElementById("duree-pari").value);
       const prediction = document.getElementById("prediction-pari").value;
 
+      console.log("Soumission pari :", { entreprise, mise, duree, prediction, solde });
+
       if (!entreprise || isNaN(mise) || mise <= 0 || solde < mise) {
         alert("Veuillez sélectionner une entreprise et entrer une mise valide (positive et inférieure à votre solde).");
         return;
@@ -483,6 +477,11 @@
       // Déduire la mise et mettre à jour le solde
       solde -= mise;
       majSolde();
+      console.log("Mise déduite, nouveau solde :", solde);
+
+      // Générer un cours initial simulé
+      const coursInitial = getCoursSimule(entreprise);
+      console.log("Cours initial simulé :", coursInitial);
 
       // Ajouter une entrée dans l'historique immédiatement
       const date = new Date().toLocaleTimeString();
@@ -496,8 +495,9 @@
         solde: solde.toFixed(2)
       };
       ajouterHistorique(entreeHistorique);
+      console.log("Entrée historique ajoutée :", entreeHistorique);
 
-      // Récupérer la cote actuelle depuis l'API
+      // Récupérer la cote depuis l'API (basée sur l'analyse de sentiment)
       fetch('/api/actualites-entreprises')
         .then(response => {
           if (!response.ok) throw new Error("Erreur réseau ou API");
@@ -507,6 +507,7 @@
           const cote = data[entreprise] && data[entreprise].cotes
             ? (prediction === "⬆️" ? data[entreprise].cotes.hausse : data[entreprise].cotes.baisse)
             : 1.0; // Valeur par défaut si l'API échoue
+          console.log("Cote récupérée (basée sur le sentiment) :", cote);
 
           const pari = {
             entreprise,
@@ -514,14 +515,15 @@
             duree,
             prediction,
             cote,
+            coursInitial, // Stocker le cours initial
             dateDebut: new Date().toISOString(),
             status: "en cours"
           };
 
           parisPersonnalises.push(pari);
           localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+          console.log("Pari enregistré :", pari);
 
-          // Afficher la durée en minutes, heures, ou jours
           let dureeTexte;
           if (duree < 3600000) {
             dureeTexte = `${duree / 60000} minute(s)`;
@@ -530,7 +532,7 @@
           } else {
             dureeTexte = `${duree / 86400000} jour(s)`;
           }
-          alert(`Pari placé : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}.`);
+          alert(`Pari placé : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}, cours initial : ${coursInitial}`);
         })
         .catch(error => {
           console.error("Erreur lors de la récupération des cotes :", error);
@@ -539,13 +541,16 @@
             mise,
             duree,
             prediction,
-            cote: 1.0, // Cote par défaut en cas d'erreur
+            cote: 1.0, // Cote par défaut
+            coursInitial,
             dateDebut: new Date().toISOString(),
             status: "en cours"
           };
 
           parisPersonnalises.push(pari);
           localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+          console.log("Pari enregistré avec cote par défaut :", pari);
+
           let dureeTexte;
           if (duree < 3600000) {
             dureeTexte = `${duree / 60000} minute(s)`;
@@ -554,10 +559,11 @@
           } else {
             dureeTexte = `${duree / 86400000} jour(s)`;
           }
-          alert(`Pari placé (cote par défaut) : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}.`);
+          alert(`Pari placé (cote par défaut) : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}, cours initial : ${coursInitial}`);
         });
 
       document.getElementById("form-pari-personnalise").style.display = "none";
+      console.log("Formulaire pari fermé");
     });
 
     // Vérifier les paris personnalisés à leur échéance
@@ -569,79 +575,51 @@
         const dateDebut = new Date(pari.dateDebut);
         const tempsEcoule = maintenant - dateDebut;
         if (tempsEcoule >= pari.duree) {
-          console.log(`Pari terminé : ${pari.entreprise}, durée ${pari.duree / 60000} minutes`);
-          // Simuler le résultat (à remplacer par une vérification réelle si API boursière)
-          fetch('/api/actualites-entreprises')
-            .then(response => {
-              if (!response.ok) throw new Error("Erreur réseau ou API");
-              return response.json();
-            })
-            .then(data => {
-              const coteActuelle = data[pari.entreprise] && data[pari.entreprise].cotes
-                ? (pari.prediction === "⬆️" ? data[pari.entreprise].cotes.hausse : data[pari.entreprise].cotes.baisse)
-                : 1.0;
-              const victoire = Math.random() < (1 / coteActuelle); // Simulation basée sur la cote actuelle
+          console.log(`Pari terminé : ${pari.entreprise}, durée ${pari.duree / 60000} minutes, cours initial : ${pari.coursInitial}`);
+          // Générer un cours final simulé
+          const coursFinal = getCoursFinal(pari.coursInitial, pari.duree);
+          console.log("Cours final simulé :", coursFinal);
 
-              let gain = 0;
-              let resultat = "";
-              let variation = ((Math.random() * 6) - 3).toFixed(2);
+          // Déterminer le résultat basé sur la comparaison des cours
+          let victoire;
+          if (coursFinal > pari.coursInitial) {
+            victoire = pari.prediction === "⬆️"; // Hausse gagne si cours augmente
+          } else if (coursFinal < pari.coursInitial) {
+            victoire = pari.prediction === "⬇️"; // Baisse gagne si cours diminue
+          } else {
+            victoire = Math.random() < (1 / pari.cote); // Tirage si égalité
+          }
+          console.log("Résultat du pari :", victoire ? "Gagnant" : "Perdant", `Cours initial : ${pari.coursInitial}, Cours final : ${coursFinal}`);
 
-              if (victoire) {
-                gain = pari.mise * pari.cote;
-                solde += gain;
-                resultat = "✅ +";
-              } else {
-                resultat = "❌ -";
-              }
+          let gain = 0;
+          let resultat = "";
+          const variation = ((coursFinal - pari.coursInitial) / pari.coursInitial * 100).toFixed(2); // Variation réelle en %
 
-              pari.status = "terminé";
-              updated = true;
+          if (victoire) {
+            gain = pari.mise * pari.cote;
+            solde += gain;
+            resultat = "✅ +";
+          } else {
+            resultat = "❌ -";
+          }
 
-              const date = new Date().toLocaleTimeString();
-              ajouterHistorique({
-                date,
-                nom: pari.entreprise,
-                prediction: pari.prediction,
-                variation,
-                resultat,
-                montant: gain ? gain.toFixed(2) : pari.mise,
-                solde: solde.toFixed(2)
-              });
+          pari.status = "terminé";
+          updated = true;
 
-              majSolde();
-            })
-            .catch(error => {
-              console.error("Erreur lors de la vérification du pari :", error);
-              // Résultat par défaut en cas d'erreur
-              const victoire = Math.random() < 0.5;
-              let gain = 0;
-              let resultat = "";
-              let variation = ((Math.random() * 6) - 3).toFixed(2);
+          const date = new Date().toLocaleTimeString();
+          const entreeHistorique = {
+            date,
+            nom: pari.entreprise,
+            prediction: pari.prediction,
+            variation, // Utiliser la variation réelle
+            resultat,
+            montant: gain ? gain.toFixed(2) : pari.mise,
+            solde: solde.toFixed(2)
+          };
+          ajouterHistorique(entreeHistorique);
+          console.log("Entrée historique ajoutée pour résultat :", entreeHistorique);
 
-              if (victoire) {
-                gain = pari.mise * pari.cote;
-                solde += gain;
-                resultat = "✅ +";
-              } else {
-                resultat = "❌ -";
-              }
-
-              pari.status = "terminé";
-              updated = true;
-
-              const date = new Date().toLocaleTimeString();
-              ajouterHistorique({
-                date,
-                nom: pari.entreprise,
-                prediction: pari.prediction,
-                variation,
-                resultat,
-                montant: gain ? gain.toFixed(2) : pari.mise,
-                solde: solde.toFixed(2)
-              });
-
-              majSolde();
-            });
+          majSolde();
           return false; // Exclure le pari terminé
         }
         return true; // Conserver les paris en cours
@@ -649,6 +627,7 @@
 
       if (updated) {
         localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+        console.log("parisPersonnalises mis à jour :", parisPersonnalises);
       }
     }
 
@@ -684,6 +663,7 @@
             <div class="cotes">
               <div class="cote-texte cote-monte">⬆️ ${hausse}</div>
               <div class="cote-texte cote-descend">⬇️ ${baisse}</div>
+              <div class="cote-note">Basé sur l'analyse des actualités</div>
             </div>
           `;
 

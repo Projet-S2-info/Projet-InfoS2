@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Boursoramax - Cotes & Actus GAFAM</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    #titre-principal {
+      text-align: center;
+      font-size: 40px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #solde-utilisateur {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    #solde {
+      font-weight: bold;
+      color: #2ecc71;
+    }
+    #cartes-entreprises {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .carte-entreprise {
+      background-color: #1f1f1f;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .carte-entreprise:hover {
+      transform: scale(1.03);
+      background-color: #292929;
+    }
+    .logo-entreprise {
+      max-width: 180px;
+      max-height: 120px;
+      object-fit: contain;
+      margin-bottom: 20px;
+    }
+    .nom-entreprise {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+    .cotes {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .cote-texte {
+      padding: 12px 20px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: bold;
+      min-width: 120px;
+      text-align: center;
+    }
+    .cote-monte {
+      background-color: #d62828;
+      color: white;
+    }
+    .cote-descend {
+      background-color: #f4f4f4;
+      color: #222;
+    }
+    #zone-affichage {
+      display: none;
+      max-width: 1000px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #1c1c1c;
+      border-radius: 10px;
+    }
+    #actus div {
+      background-color: #2a2a2a;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+    #resultat-simulation {
+      display: none;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    #historique {
+      margin-top: 30px;
+    }
+    #historique h3 {
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+    #historique ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    #historique li {
+      background-color: #2c2c2c;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    #graphique-paris-container {
+      margin-top: 40px;
+    }
+    canvas {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 100%;
+      background-color: #333;
+      border-radius: 10px;
+    }
+    /* Styles pour le formulaire de pari personnalisé */
+    #bouton-pari-personnalise {
+      padding: 8px 20px;
+      border-radius: 8px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    #form-pari-personnalise {
+      display: none;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #1c1c1c;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #form-pari-personnalise select,
+    #form-pari-personnalise input {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+      background-color: #2a2a2a;
+      color: white;
+      font-size: 16px;
+    }
+    #form-pari-personnalise button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background-color: #2ecc71;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #form-pari-personnalise button:hover {
+      background-color: #27ae60;
+    }
+    /* Styles pour le formulaire de réinitialisation */
+    #bouton-reinitialiser {
+      padding: 8px 20px;
+      border-radius: 8px;
+      background-color: #e74c3c;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    #form-reinitialiser {
+      display: none;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #1c1c1c;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #form-reinitialiser label {
+      display: block;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    #form-reinitialiser input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    #form-reinitialiser button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background-color: #2ecc71;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #form-reinitialiser button:hover {
+      background-color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="titre-principal">📊 Boursoramax</h1>
+  <div id="solde-utilisateur">💰 Solde : <span id="solde">100</span> pièces</div>
+  <div style="text-align: center; margin-bottom: 20px;">
+    <button id="bouton-reinitialiser">🔄 Réinitialiser</button>
+    <button id="bouton-pari-personnalise">🎲 Nouveau pari personnalisé</button>
+  </div>
+  
+  <div id="form-reinitialiser">
+    <h3>🔄 Options de réinitialisation</h3>
+    <label><input type="checkbox" id="reset-solde"> Réinitialiser le solde (remettre à 100 pièces)</label>
+    <label><input type="checkbox" id="reset-historique"> Réinitialiser l'historique (supprimer tous les paris)</label>
+    <button id="confirmer-reinitialiser">Confirmer</button>
+  </div>
+
+  <div id="form-pari-personnalise">
+    <h3>🎯 Définir un pari personnalisé</h3>
+    <select id="select-entreprise">
+      <option value="">Choisir une entreprise</option>
+      <option value="Google">Google</option>
+      <option value="Apple">Apple</option>
+      <option value="Facebook">Facebook</option>
+      <option value="Amazon">Amazon</option>
+      <option value="Microsoft">Microsoft</option>
+      <option value="Tesla">Tesla</option>
+    </select>
+    <input type="number" id="mise-pari" placeholder="Mise (pièces)" min="1" step="1">
+    <select id="duree-pari">
+      <option value="60000">1 minute</option>
+      <option value="3600000">1 heure</option>
+      <option value="86400000">1 jour</option>
+      <option value="259200000">3 jours</option>
+      <option value="604800000">7 jours</option>
+    </select>
+    <select id="prediction-pari">
+      <option value="⬆️">Hausse</option>
+      <option value="⬇️">Baisse</option>
+    </select>
+    <button id="soumettre-pari">Placer le pari</button>
+  </div>
+
+  <div id="cartes-entreprises"></div>
+  <div id="zone-affichage">
+    <h2 id="titre-entreprise"></h2>
+    <canvas id="graphique"></canvas>
+    <div id="actus" style="margin-top: 20px;"></div>
+    <div id="resultat-simulation"></div>
+    <div id="historique">
+      <h3>📜 Historique des paris</h3>
+      <ul id="liste-historique"></ul>
+    </div>
+    <div id="graphique-paris-container">
+      <h3>📈 Historique du solde après chaque pari</h3>
+      <canvas id="graphique-paris"></canvas>
+    </div>
+  </div>
+  <script>
+    const entreprises = {
+      Google: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+      Apple: "https://cdn-icons-png.flaticon.com/512/0/747.png",
+      Facebook: "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
+      Amazon: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
+      Microsoft: "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg",
+      Tesla: "https://upload.wikimedia.org/wikipedia/commons/e/e8/Tesla_logo.png"
+    };
+
+    const motsPositifs = ["hausse", "bénéfice", "bon", "croissance", "succès", "record", "accord", "partenariat", "lancement", "réussi"];
+    const motsNegatifs = ["baisse", "perte", "crise", "mauvais", "déception", "échec", "retard", "problème", "chute", "procès"];
+
+    function analyserSentiment(texte) {
+      const mots = texte.toLowerCase().split(/\W+/);
+      let score = 0;
+      mots.forEach(mot => {
+        if (motsPositifs.includes(mot)) score++;
+        if (motsNegatifs.includes(mot)) score--;
+      });
+      return score;
+    }
+
+    function calculerCotes(score) {
+      const probaMonte = Math.min(0.95, Math.max(0.05, 0.5 + score / 20));
+      return {
+        monte: (1 / probaMonte).toFixed(2),
+        descend: (1 / (1 - probaMonte)).toFixed(2)
+      };
+    }
+
+    let solde = parseFloat(localStorage.getItem("solde")) || 100;
+    const historique = JSON.parse(localStorage.getItem("historique")) || [];
+    let graphiqueParis;
+    const donneesParis = {
+      labels: [],
+      datasets: [{
+        label: 'Solde après chaque pari',
+        data: [],
+        fill: false,
+        borderColor: '#00bcd4',
+        backgroundColor: '#00bcd4',
+        tension: 0.3
+      }]
+    };
+
+    // Stocker les paris personnalisés
+    let parisPersonnalises = JSON.parse(localStorage.getItem("parisPersonnalises")) || [];
+
+    function majGraphiqueParis() {
+      const ctx = document.getElementById("graphique-paris").getContext("2d");
+      if (graphiqueParis) graphiqueParis.destroy();
+      graphiqueParis = new Chart(ctx, {
+        type: 'line',
+        data: donneesParis,
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    function majSolde() {
+      document.getElementById("solde").textContent = solde.toFixed(2);
+      localStorage.setItem("solde", solde.toFixed(2));
+    }
+
+    // Gestion du formulaire de réinitialisation
+    document.getElementById("bouton-reinitialiser").addEventListener("click", () => {
+      const form = document.getElementById("form-reinitialiser");
+      form.style.display = form.style.display === "block" ? "none" : "block";
+    });
+
+    document.getElementById("confirmer-reinitialiser").addEventListener("click", () => {
+      const resetSolde = document.getElementById("reset-solde").checked;
+      const resetHistorique = document.getElementById("reset-historique").checked;
+
+      if (!resetSolde && !resetHistorique) {
+        alert("Veuillez sélectionner au moins une option à réinitialiser.");
+        return;
+      }
+
+      if (resetSolde) {
+        solde = 100;
+        localStorage.setItem("solde", solde.toFixed(2));
+        majSolde();
+      }
+
+      if (resetHistorique) {
+        historique.length = 0;
+        parisPersonnalises.length = 0;
+        donneesParis.labels.length = 0;
+        donneesParis.datasets[0].data.length = 0;
+        localStorage.removeItem("historique");
+        localStorage.removeItem("parisPersonnalises");
+        afficherHistorique();
+        majGraphiqueParis();
+      }
+
+      alert("✅ Réinitialisation effectuée !");
+      document.getElementById("form-reinitialiser").style.display = "none";
+    });
+
+    function ajouterHistorique(entry) {
+      historique.unshift(entry);
+      if (historique.length > 5) historique.pop();
+      localStorage.setItem("historique", JSON.stringify(historique));
+      afficherHistorique();
+      donneesParis.labels.push(`#${donneesParis.labels.length + 1}`);
+      donneesParis.datasets[0].data.push(parseFloat(entry.solde));
+      majGraphiqueParis();
+    }
+
+    function afficherHistorique() {
+      const ul = document.getElementById("liste-historique");
+      ul.innerHTML = "";
+      historique.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = `${item.date} | ${item.nom} | ${item.prediction} | ${item.variation}% | ${item.resultat} ${item.montant} pièces`;
+        ul.appendChild(li);
+      });
+    }
+
+    function afficherCartesEntreprises() {
+      const container = document.getElementById("cartes-entreprises");
+      container.innerHTML = "";
+
+      Object.keys(entreprises).forEach(nom => {
+        const bloc = document.createElement("div");
+        bloc.className = "carte-entreprise";
+
+        const actus = [
+          { title: `${nom} en forte croissance`, description: `${nom} annonce une hausse record de ses ventes.` },
+          { title: `${nom} visé par une enquête`, description: `Rumeurs de procès contre ${nom}.` }
+        ];
+
+        let scoreTotal = 0;
+        actus.forEach(article => {
+          scoreTotal += analyserSentiment(article.title + ' ' + article.description);
+        });
+
+        const { monte, descend } = calculerCotes(scoreTotal);
+
+        bloc.innerHTML = `
+          <img src="${entreprises[nom]}" alt="${nom}" class="logo-entreprise">
+          <div class="nom-entreprise">${nom}</div>
+          <div class="cotes">
+            <div class="cote-texte cote-monte">⬆️ ${monte}</div>
+            <div class="cote-texte cote-descend">⬇️ ${descend}</div>
+          </div>
+        `;
+
+        bloc.onclick = () => afficherDetails(nom);
+        container.appendChild(bloc);
+      });
+    }
+
+    function afficherDetails(nom, articles) {
+      document.getElementById("titre-entreprise").textContent = nom;
+      document.getElementById("zone-affichage").style.display = "block";
+
+      const ctx = document.getElementById("graphique").getContext("2d");
+      if (window.monGraphique) window.monGraphique.destroy();
+      window.monGraphique = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+          datasets: [{
+            label: `Cours ${nom}`,
+            data: Array.from({ length: 5 }, () => Math.floor(Math.random() * 50) + 100),
+            borderColor: '#cc0000',
+            borderWidth: 2,
+            fill: false
+          }]
+        }
+      });
+
+      const actusDiv = document.getElementById("actus");
+      actusDiv.innerHTML = "";
+      articles.forEach(article => {
+        const bloc = document.createElement("div");
+        bloc.innerHTML = `
+          <h4>${article.title}</h4>
+          <p>${article.description || ''}</p>
+          <a href="${article.url}" target="_blank">Lire plus</a>
+          <hr>
+        `;
+        actusDiv.appendChild(bloc);
+      });
+
+      afficherHistorique();
+    }
+
+    // Gestion du formulaire de pari personnalisé
+    document.getElementById("bouton-pari-personnalise").addEventListener("click", () => {
+      const form = document.getElementById("form-pari-personnalise");
+      form.style.display = form.style.display === "block" ? "none" : "block";
+    });
+
+    document.getElementById("soumettre-pari").addEventListener("click", () => {
+      const entreprise = document.getElementById("select-entreprise").value;
+      const mise = parseFloat(document.getElementById("mise-pari").value);
+      const duree = parseInt(document.getElementById("duree-pari").value);
+      const prediction = document.getElementById("prediction-pari").value;
+
+      if (!entreprise || isNaN(mise) || mise <= 0 || solde < mise) {
+        alert("Veuillez sélectionner une entreprise et entrer une mise valide (positive et inférieure à votre solde).");
+        return;
+      }
+
+      // Déduire la mise et mettre à jour le solde
+      solde -= mise;
+      majSolde();
+
+      // Ajouter une entrée dans l'historique immédiatement
+      const date = new Date().toLocaleTimeString();
+      const entreeHistorique = {
+        date,
+        nom: entreprise,
+        prediction,
+        variation: "En attente",
+        resultat: "⏳",
+        montant: mise.toFixed(2),
+        solde: solde.toFixed(2)
+      };
+      ajouterHistorique(entreeHistorique);
+
+      // Récupérer la cote actuelle depuis l'API
+      fetch('/api/actualites-entreprises')
+        .then(response => {
+          if (!response.ok) throw new Error("Erreur réseau ou API");
+          return response.json();
+        })
+        .then(data => {
+          const cote = data[entreprise] && data[entreprise].cotes
+            ? (prediction === "⬆️" ? data[entreprise].cotes.hausse : data[entreprise].cotes.baisse)
+            : 1.0; // Valeur par défaut si l'API échoue
+
+          const pari = {
+            entreprise,
+            mise,
+            duree,
+            prediction,
+            cote,
+            dateDebut: new Date().toISOString(),
+            status: "en cours"
+          };
+
+          parisPersonnalises.push(pari);
+          localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+
+          // Afficher la durée en minutes, heures, ou jours
+          let dureeTexte;
+          if (duree < 3600000) {
+            dureeTexte = `${duree / 60000} minute(s)`;
+          } else if (duree < 86400000) {
+            dureeTexte = `${duree / 3600000} heure(s)`;
+          } else {
+            dureeTexte = `${duree / 86400000} jour(s)`;
+          }
+          alert(`Pari placé : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}.`);
+        })
+        .catch(error => {
+          console.error("Erreur lors de la récupération des cotes :", error);
+          const pari = {
+            entreprise,
+            mise,
+            duree,
+            prediction,
+            cote: 1.0, // Cote par défaut en cas d'erreur
+            dateDebut: new Date().toISOString(),
+            status: "en cours"
+          };
+
+          parisPersonnalises.push(pari);
+          localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+          let dureeTexte;
+          if (duree < 3600000) {
+            dureeTexte = `${duree / 60000} minute(s)`;
+          } else if (duree < 86400000) {
+            dureeTexte = `${duree / 3600000} heure(s)`;
+          } else {
+            dureeTexte = `${duree / 86400000} jour(s)`;
+          }
+          alert(`Pari placé (cote par défaut) : ${mise} pièces sur ${entreprise} (${prediction}) pour ${dureeTexte}.`);
+        });
+
+      document.getElementById("form-pari-personnalise").style.display = "none";
+    });
+
+    // Vérifier les paris personnalisés à leur échéance
+    function verifierParisPersonnalises() {
+      const maintenant = new Date();
+      let updated = false; // Indicateur pour détecter les changements
+      parisPersonnalises = parisPersonnalises.filter(pari => {
+        if (pari.status !== "en cours") return false; // Exclure les paris terminés
+        const dateDebut = new Date(pari.dateDebut);
+        const tempsEcoule = maintenant - dateDebut;
+        if (tempsEcoule >= pari.duree) {
+          console.log(`Pari terminé : ${pari.entreprise}, durée ${pari.duree / 60000} minutes`);
+          // Simuler le résultat (à remplacer par une vérification réelle si API boursière)
+          fetch('/api/actualites-entreprises')
+            .then(response => {
+              if (!response.ok) throw new Error("Erreur réseau ou API");
+              return response.json();
+            })
+            .then(data => {
+              const coteActuelle = data[pari.entreprise] && data[pari.entreprise].cotes
+                ? (pari.prediction === "⬆️" ? data[pari.entreprise].cotes.hausse : data[pari.entreprise].cotes.baisse)
+                : 1.0;
+              const victoire = Math.random() < (1 / coteActuelle); // Simulation basée sur la cote actuelle
+
+              let gain = 0;
+              let resultat = "";
+              let variation = ((Math.random() * 6) - 3).toFixed(2);
+
+              if (victoire) {
+                gain = pari.mise * pari.cote;
+                solde += gain;
+                resultat = "✅ +";
+              } else {
+                resultat = "❌ -";
+              }
+
+              pari.status = "terminé";
+              updated = true;
+
+              const date = new Date().toLocaleTimeString();
+              ajouterHistorique({
+                date,
+                nom: pari.entreprise,
+                prediction: pari.prediction,
+                variation,
+                resultat,
+                montant: gain ? gain.toFixed(2) : pari.mise,
+                solde: solde.toFixed(2)
+              });
+
+              majSolde();
+            })
+            .catch(error => {
+              console.error("Erreur lors de la vérification du pari :", error);
+              // Résultat par défaut en cas d'erreur
+              const victoire = Math.random() < 0.5;
+              let gain = 0;
+              let resultat = "";
+              let variation = ((Math.random() * 6) - 3).toFixed(2);
+
+              if (victoire) {
+                gain = pari.mise * pari.cote;
+                solde += gain;
+                resultat = "✅ +";
+              } else {
+                resultat = "❌ -";
+              }
+
+              pari.status = "terminé";
+              updated = true;
+
+              const date = new Date().toLocaleTimeString();
+              ajouterHistorique({
+                date,
+                nom: pari.entreprise,
+                prediction: pari.prediction,
+                variation,
+                resultat,
+                montant: gain ? gain.toFixed(2) : pari.mise,
+                solde: solde.toFixed(2)
+              });
+
+              majSolde();
+            });
+          return false; // Exclure le pari terminé
+        }
+        return true; // Conserver les paris en cours
+      });
+
+      if (updated) {
+        localStorage.setItem("parisPersonnalises", JSON.stringify(parisPersonnalises));
+      }
+    }
+
+    // Vérifier les paris toutes les 10 secondes pour les durées courtes
+    setInterval(verifierParisPersonnalises, 10 * 1000);
+
+    afficherCartesEntreprises();
+    majSolde();
+    afficherHistorique();
+    historique.slice().reverse().forEach((h, i) => {
+      donneesParis.labels.push(`#${i + 1}`);
+      donneesParis.datasets[0].data.push(parseFloat(h.solde));
+    });
+    majGraphiqueParis();
+
+    // Récupérer les cotes calculées par Flask
+    fetch('/api/actualites-entreprises')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById("cartes-entreprises");
+        container.innerHTML = "";
+
+        Object.keys(data).forEach(nom => {
+          const entreprise = data[nom];
+          const { hausse, baisse } = entreprise.cotes;  // Cotes envoyées par Flask
+
+          const bloc = document.createElement("div");
+          bloc.className = "carte-entreprise";
+
+          bloc.innerHTML = `
+            <img src="${entreprises[nom]}" alt="${nom}" class="logo-entreprise">
+            <div class="nom-entreprise">${nom}</div>
+            <div class="cotes">
+              <div class="cote-texte cote-monte">⬆️ ${hausse}</div>
+              <div class="cote-texte cote-descend">⬇️ ${baisse}</div>
+            </div>
+          `;
+
+          // Affichage des détails au clic
+          bloc.onclick = () => afficherDetails(nom, entreprise.articles);
+          container.appendChild(bloc);
+        });
+      });
+  </script>
+</body>
+</html>
